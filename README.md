@@ -1,0 +1,1 @@
+# edd-yandex-kassa
