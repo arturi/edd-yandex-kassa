@@ -1,0 +1,24 @@
+Options +FollowSymLinks
+RewriteEngine On
+
+#RewriteRule ^ru/kassa-check$ index.php?ya-kassa-check=1
+#RewriteRule ^ru/kassa-aviso$ index.php?ya-kassa-aviso=1
+
+# remove language URL prefix according to your setup
+RewriteRule ^ru/kassa-check$ index.php?yk-check=1
+RewriteRule ^ru/kassa-aviso$ index.php?yk-aviso=1
+RewriteRule ^ru/kassa-success$ index.php?yk-success=1
+RewriteRule ^ru/kassa-fail$ index.php?yk-fail=1
+
+#RewriteBase /
+RewriteRule ^index\.php$ - [L]
+
+# add a trailing slash to /wp-admin
+RewriteRule ^([_0-9a-zA-Z-]+/)?wp-admin$ $1wp-admin/ [R=301,L]
+
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+RewriteRule ^([_0-9a-zA-Z-]+/)?(wp-(content|admin|includes).*) $2 [L]
+RewriteRule ^([_0-9a-zA-Z-]+/)?(.*\.php)$ $2 [L]
+RewriteRule . index.php [L]
