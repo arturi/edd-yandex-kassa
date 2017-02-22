@@ -1,4 +1,14 @@
-<?php
+<?php /*
+
+**************************************************************************
+
+Plugin Name:  EDD Yandex Kassa
+Description:  Adds Yandex.Kassa payment gateway support to Easy Digital Downloads
+Version:      0.0.1
+Author:       Artur Paikin, Vadim Sigaev
+Author URI:
+
+**************************************************************************/
 
 // registers the gateway
 function pw_edd_register_gateway($gateways) {
@@ -87,7 +97,7 @@ function gateway_function_to_process_payment($purchase_data) {
 	$yandex_redirect .= http_build_query( $yandex_args );
 
 	// Redirect
-	// wp_redirect( $yandex_redirect );
+	wp_redirect( $yandex_redirect );
 
 	// if the merchant payment is complete, set a flag
 	$merchant_payment_confirmed = false;
