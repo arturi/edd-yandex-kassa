@@ -4,25 +4,77 @@
 
 Plugin Name:  EDD Yandex Kassa
 Description:  Adds Yandex.Kassa payment gateway support to Easy Digital Downloads
-Version:      0.0.1
-Author:       Artur Paikin, Vadim Sigaev
+Version:      0.1.0
+Author: Artur Paikin, Vadim Sigaev 
 Author URI:
 
 **************************************************************************/
 
-// registers the gateway
-function pw_edd_register_gateway($gateways) {
+add_action('init', 'yandex_result_hooks');
+
+function yandex_result_hooks () {
+	if ( isset($_GET['yk-success']) ) {
+		edd_empty_cart();
+		edd_send_to_success_page();
+		die();
+	} else if ( isset($_GET['yk-fail']) ) {
+		wp_redirect(edd_get_failed_transaction_uri());
+		die();
+	}
+}
+
+add_action('init', 'yandex_url_hooks');
+
+function yandex_url_hooks () {
+	if ( $_GET['yk-check'] || $_GET['yk-aviso'] ) {
+		$ya_mode = $_GET['yk-check'] ? 'check' : 'aviso';
+		$payment_id = intval($_POST['orderNumber']);
+		
+		if ( !is_integer($payment_id) ) {
+			wp_die('Bad payment');
+		}
+
+		$payment_amount = edd_get_payment_amount($payment_id);
+
+		if ( intval($payment_amount) !== intval($_POST['orderSumAmount']) ) {
+			wp_die('Bad amount');
+		}
+
+		$code = 0;
+
+		// Проверка shopPassowd'а!
+		
+		// $hash = md5($_POST['action'].';'.$_POST['orderSumAmount'].';'.$_POST['orderSumCurrencyPaycash'].';'.$_POST['orderSumBankPaycash'].';'.edd_get_option('shopId',false).';'.$_POST['invoiceId'].';'.$_POST['customerNumber'].';'.edd_get_option('shopPassword',false));		
+		// if (strtolower($hash) != strtolower($_POST['md5'])){ 
+		// 	$code = 1;
+		// }
+		// else {
+		// 	$code = 0;
+		// }
+
+		echo '<?xml version="1.0" encoding="UTF-8"?>';
+		if ( $ya_mode == 'check' ) {
+			echo '<checkOrderResponse performedDatetime="'. $_POST['requestDatetime'] .'" code="'.$code.'"'. ' invoiceId="'. $_POST['invoiceId'] .'" shopId="'. edd_get_option('ya_shop_id', false) .'"/>';
+		} else if ( $ya_mode == 'aviso' ) {
+			echo '<paymentAvisoResponse performedDatetime="'. $_POST['requestDatetime'] .'" code="'.$code.'" invoiceId="'. $_POST['invoiceId'] .'" shopId="'. edd_get_option('ya_shop_id', false) .'"/>';
+
+			edd_update_payment_status($payment_id, 'completed');
+		}
+		die();
+	}
+}
+
+// Register EDD Gateway
+function pw_edd_register_gateway ($gateways) {
 	$gateways['yandex'] = array('admin_label' => 'Yandex.Kassa', 'checkout_label' => __('Yandex.Kassa', 'pw_edd'));
 	return $gateways;
 }
 add_filter('edd_payment_gateways', 'pw_edd_register_gateway');
 
-// remove the default CC form
 add_action('edd_yandex_cc_form', '__return_false');
 
-// adds the settings to the Payment Gateways section
-function pw_edd_add_settings($settings) {
-
+// Add EDD Payment Gateway Settings
+function pw_edd_add_settings ($settings) {
 	$yandex_gateway_settings = array(
 		array(
 			'id' => 'yandex_gateway_settings',
@@ -51,17 +103,18 @@ function pw_edd_add_settings($settings) {
 }
 add_filter('edd_settings_gateways', 'pw_edd_add_settings');
 
-// process payment
+// Process payment
 function gateway_function_to_process_payment($purchase_data) {
 	// payment processing happens here
-	// if (edd_is_test_mode()) {
-	//
-	// } else {
-	//
-	// }
+	var_dump( edd_is_test_mode() );
+
+	if (edd_is_test_mode()) {
+		$yandex_redirect  = 'https://demomoney.yandex.ru/eshop.xml?';
+	} else {
+		$yandex_redirect  = 'https://money.yandex.ru/eshop.xml?';
+	}
 
 	$purchase_summary = edd_get_purchase_summary($purchase_data);
-	// var_dump($purchase_data);
 
 	$payment_data = array(
 		'price' => $purchase_data['price'],
@@ -75,8 +128,6 @@ function gateway_function_to_process_payment($purchase_data) {
 		'status' => 'pending'
 	);
 
-	// echo $purchase_data['purchase_key'];
-
 	// Record the pending payment
 	$payment = edd_insert_payment($payment_data);
 
@@ -86,33 +137,13 @@ function gateway_function_to_process_payment($purchase_data) {
 		'scid'          =>  edd_get_option('ya_scid', false),
 		'cps_email'     =>  $purchase_data['user_email'],
 		'Sum'           =>  $purchase_data['price'],
-		'orderNumber'   =>  $purchase_data['purchase_key'],
-		'orderDetails'  =>  $purchase_data['cart_details'],
+		'orderNumber'   =>  $payment,
 		'CustName'      =>  $purchase_data['user_info']['first_name'],
 		'paymentType'   =>  'AC'
 	);
 
-	// Build query
-	$yandex_redirect  = 'https://money.yandex.ru/eshop.xml?';
 	$yandex_redirect .= http_build_query( $yandex_args );
-
-	// Redirect
 	wp_redirect( $yandex_redirect );
-
-	// if the merchant payment is complete, set a flag
-	$merchant_payment_confirmed = false;
-
-	if ($merchant_payment_confirmed) { // this is used when processing credit cards on site
-
-		// once a transaction is successful, set the purchase to complete
-		edd_update_payment_status($payment, 'complete');
-
-		// go to the success page
-		edd_send_to_success_page();
-
-	} else {
-		$fail = true; // payment wasn't recorded
-	}
 }
 add_action('edd_gateway_yandex', 'gateway_function_to_process_payment');
 
