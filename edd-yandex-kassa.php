@@ -2,11 +2,12 @@
 
 **************************************************************************
 
-Plugin Name:  EDD Yandex Kassa
-Description:  Adds Yandex.Kassa payment gateway support to Easy Digital Downloads
-Version:      0.1.0
+Plugin Name: EDD Yandex Kassa
+Description: Adds Yandex.Kassa payment gateway support to Easy Digital Downloads
+Version: 0.1.0
 Author: Artur Paikin, Vadim Sigaev 
-Author URI:
+Author URI: http://unebaguette.com
+License: MIT
 
 **************************************************************************/
 
